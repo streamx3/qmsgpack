@@ -1,7 +1,9 @@
 *.pro.user*
-build
+build*
 lib
 Makefile*
 *.autosave
 bin/
 *.o
+CMakeLists.txt~
+CMakeLists.txt.user

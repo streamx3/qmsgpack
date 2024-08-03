@@ -8,13 +8,17 @@ endif(NOT DEFINED COMPILE_TYPE)
 
 add_library(qmsgpack ${COMPILE_TYPE} ${qmsgpack_srcs} ${qmsgpack_headers})
 
-if (Qt5Core_FOUND)
+if (Qt6Core_FOUND)
+	target_link_libraries(qmsgpack Qt6::Core)
+elseif (Qt5Core_FOUND)
 	target_link_libraries(qmsgpack Qt5::Core)
 else ()
-	target_link_libraries(qmsgpack ${QT_LIBRARIES})
+	message(FATAL_ERROR "Qt5 or Qt6 not found")
 endif ()
 
-if (Qt5Gui_FOUND)
+if (Qt6Gui_FOUND)
+	target_link_libraries(qmsgpack Qt6::Gui)
+elseif (Qt5Gui_FOUND)
 	target_link_libraries(qmsgpack Qt5::Gui)
 endif ()
 
@@ -37,6 +41,5 @@ install(TARGETS qmsgpack EXPORT qmsgpack-export
 	RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 	ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
 	PUBLIC_HEADER DESTINATION ${INCLUDE_INSTALL_DIR}/qmsgpack)
-
 
 install(FILES  ${qmsgpack_stream_headers} DESTINATION ${INCLUDE_INSTALL_DIR}/qmsgpack/stream)
