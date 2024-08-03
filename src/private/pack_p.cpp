@@ -19,49 +19,49 @@ QReadWriteLock MsgPackPrivate::packers_lock;
 
 quint8 *MsgPackPrivate::pack(const QVariant &v, quint8 *p, bool wr, QVector<QByteArray> &user_data)
 {
-    QMetaType::Type t = (QMetaType::Type)v.type();
+    int typeId = v.typeId();
 #if QT_VERSION > QT_VERSION_CHECK(5, 8, 0)
-    if ((v.isNull() && !v.isValid()) || t == QMetaType::Nullptr)
+    if ((v.isNull() && !v.isValid()) || typeId == QMetaType::Nullptr)
 #else
     if (v.isNull() && !v.isValid())
-#endif  
+#endif
         p = pack_nil(p, wr);
-    else if (t == QMetaType::Int)
+    else if (typeId == QMetaType::Int)
         p = pack_int(v.toInt(), p, wr);
-    else if (t == QMetaType::UInt)
+    else if (typeId == QMetaType::UInt)
         p = pack_uint(v.toUInt(), p, wr);
-    else if (t == QMetaType::Bool)
-        p = pack_bool(v, p, wr);
-    else if (t == QMetaType::QString)
+    else if (typeId == QMetaType::Bool)
+        p = pack_bool(v.toBool(), p, wr);
+    else if (typeId == QMetaType::QString)
         p = pack_string(v.toString(), p, wr);
-    else if (t == QMetaType::QVariantList)
+    else if (typeId == QMetaType::QVariantList)
         p = pack_array(v.toList(), p, wr, user_data);
-    else if (t == QMetaType::QStringList)
+    else if (typeId == QMetaType::QStringList)
         p = pack_stringlist(v.toStringList(), p, wr);
-    else if (t == QMetaType::LongLong)
+    else if (typeId == QMetaType::LongLong)
         p = pack_longlong(v.toLongLong(), p, wr);
-    else if (t == QMetaType::ULongLong)
+    else if (typeId == QMetaType::ULongLong)
         p = pack_ulonglong(v.toULongLong(), p, wr);
-    else if (t == QMetaType::Double)
+    else if (typeId == QMetaType::Double)
         p = pack_double(v.toDouble(), p, wr);
-    else if (t == QMetaType::Float)
+    else if (typeId == QMetaType::Float)
         p = pack_float(v.toFloat(), p, wr);
-    else if (t == QMetaType::QByteArray)
+    else if (typeId == QMetaType::QByteArray)
         p = pack_bin(v.toByteArray(), p, wr);
-    else if (t == QMetaType::QVariantMap)
+    else if (typeId == QMetaType::QVariantMap)
         p = pack_map(v.toMap(), p, wr, user_data);
     else {
-        if (t == QMetaType::User)
-            t = (QMetaType::Type)v.userType();
+        if (typeId == QMetaType::User)
+            typeId = v.metaType().id();
         QReadLocker locker(&packers_lock);
-        bool has_packer = user_packers.contains(t);
+        bool has_packer = user_packers.contains(typeId);
         if (has_packer)
-            has_packer &= user_packers[t].packer != 0;
+            has_packer &= user_packers[typeId].packer != nullptr;
         locker.unlock();
         if (has_packer)
             p = pack_user(v, p, wr, user_data);
         else
-            qWarning() << "MsgPack::pack can't pack type:" << t;
+            qWarning() << "MsgPack::pack can't pack type:" << typeId;
     }
 
     return p;
@@ -347,19 +347,20 @@ qint8 MsgPackPrivate::msgpack_type(QMetaType::Type q_type)
     return -1;
 }
 
-quint8 *MsgPackPrivate::pack_user(const QVariant &v, quint8 *p, bool wr, QVector<QByteArray> &user_data)
+quint8 *MsgPackPrivate::pack_user(const QVariant &v,
+                                  quint8 *p,
+                                  bool wr,
+                                  QVector<QByteArray> &user_data)
 {
-    QMetaType::Type t = (QMetaType::Type)v.type() == QMetaType::User ?
-                (QMetaType::Type)v.userType() : (QMetaType::Type)v.type();
+    int typeId = v.typeId() == QMetaType::User ? v.metaType().id() : v.typeId();
     QReadLocker locker(&packers_lock);
-    packer_t pt = user_packers[t];
+    packer_t pt = user_packers[typeId];
     locker.unlock();
 
     QByteArray data;
     if (wr) {
         data = user_data.front();
         user_data.pop_front();
-
     } else {
         data = pt.packer(v);
         user_data.push_back(data);
@@ -367,37 +368,49 @@ quint8 *MsgPackPrivate::pack_user(const QVariant &v, quint8 *p, bool wr, QVector
 
     quint32 len = data.size();
     if (len == 1) {
-        if (wr) *p = 0xd4;
+        if (wr)
+            *p = 0xd4;
         p++;
     } else if (len == 2) {
-        if (wr) *p = 0xd5;
+        if (wr)
+            *p = 0xd5;
         p++;
     } else if (len == 4) {
-        if (wr) *p = 0xd6;
+        if (wr)
+            *p = 0xd6;
         p++;
     } else if (len == 8) {
-        if (wr) *p = 0xd7;
+        if (wr)
+            *p = 0xd7;
         p++;
     } else if (len == 16) {
-        if (wr) *p = 0xd8;
+        if (wr)
+            *p = 0xd8;
         p++;
     } else if (len <= std::numeric_limits<quint8>::max()) {
-        if (wr) *p = 0xc7;
+        if (wr)
+            *p = 0xc7;
         p++;
-        if (wr) *p = len;
+        if (wr)
+            *p = len;
         p++;
     } else if (len <= std::numeric_limits<quint16>::max()) {
-        if (wr) *p = 0xc8;
+        if (wr)
+            *p = 0xc8;
         p++;
-        if (wr) _msgpack_store16(p, len);
+        if (wr)
+            _msgpack_store16(p, len);
         p += 2;
     } else {
-        if (wr) *p = 0xc9;
+        if (wr)
+            *p = 0xc9;
         p++;
-        if (wr) _msgpack_store32(p, len);
+        if (wr)
+            _msgpack_store32(p, len);
         p += 4;
     }
-    if (wr) *p = pt.type;
+    if (wr)
+        *p = pt.type;
     p++;
     if (wr)
         memcpy(p, data.data(), len);
