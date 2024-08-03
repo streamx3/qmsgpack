@@ -24,10 +24,18 @@ void MixedTest::test_uint()
         const quint32 u = (0x1UL << i) - 1;
         QByteArray packed = MsgPack::pack(u);
         QVariant unpacked = MsgPack::unpack(packed);
+#if QT_VERSION_MAJOR >= 6
         QVERIFY2(unpacked.typeId() == QMetaType::UInt,
                  qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.typeName())));
         QVERIFY2(unpacked.toUInt() == u,
                  qPrintable(QString("Unpack failed for value %1. Value is %2").arg(u).arg(unpacked.toUInt())));
+#else
+        QVERIFY2(unpacked.type() == QVariant::Type::UInt,
+                 qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.type())));
+        QVERIFY2(unpacked.toUInt() == u,
+                 qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.type())));
+#endif
+
     }
 }
 
