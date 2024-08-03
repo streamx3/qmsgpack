@@ -21,13 +21,13 @@ private Q_SLOTS:
 void MixedTest::test_uint()
 {
     for (int i = 0; i <= 32; ++i) {
-        const quint32 u = (0x1UL<<i) - 1;
+        const quint32 u = (0x1UL << i) - 1;
         QByteArray packed = MsgPack::pack(u);
         QVariant unpacked = MsgPack::unpack(packed);
-        QVERIFY2(unpacked.type() == QVariant::Type::UInt,
-                 qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.type())));
+        QVERIFY2(unpacked.typeId() == QMetaType::UInt,
+                 qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.typeName())));
         QVERIFY2(unpacked.toUInt() == u,
-                 qPrintable(QString("Unpack failed for value %1. Type is %2").arg(u).arg(unpacked.type())));
+                 qPrintable(QString("Unpack failed for value %1. Value is %2").arg(u).arg(unpacked.toUInt())));
     }
 }
 

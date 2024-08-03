@@ -34,7 +34,7 @@ void PackTest::test_nil()
 
 #if QT_VERSION > QT_VERSION_CHECK(5, 8, 0)
     v.setValue(nullptr);
-    QVERIFY((QMetaType::Type)v.type() == QMetaType::Nullptr);
+    QVERIFY(v.typeId() == QMetaType::Nullptr);
     arr = MsgPack::pack(v);
     p = (quint8 *)arr.data();
     QVERIFY(arr.size() == 1);
